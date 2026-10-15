@@ -8,16 +8,36 @@
   <link rel="stylesheet" href="css/estilos.css">
 </head>
 <body>
-  <header>
-    <h1>Módulo de Asistencia Institucional</h1>
-  </header>
 
-  <main>
+  <!-- PANTALLA DE LOGIN -->
+  <div id="pantallaLogin" style="display: flex; justify-content: center; align-items: center; height: 100vh; background: #f0f2f5; position: fixed; top: 0; left: 0; width: 100%; z-index: 1000;">
+    <div style="background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 100%; max-width: 350px; text-align: center;">
+      <h2>Acceso Restringido</h2>
+      <p style="color: #666; font-size: 14px; margin-bottom: 20px;">Ingrese usuario y contraseña</p>
+      
+      <input type="text" id="inputUsuario" placeholder="Usuario" autocomplete="off" style="width: 100%; padding: 10px; margin-bottom: 12px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box;">
+      
+      <!-- Campo de Contraseña con el ojito para ver/ocultar -->
+      <div style="position: relative; width: 100%; margin-bottom: 15px;">
+        <input type="password" id="inputPass" placeholder="Contraseña" style="width: 100%; padding: 10px; padding-right: 40px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box;">
+        <button type="button" onclick="togglePassword()" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 16px;" title="Ver/Ocultar contraseña">👁️</button>
+      </div>
+
+      <button type="button" onclick="verificarLogin()" style="width: 100%; padding: 10px; background: #007bff; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">Ingresar</button>
+      <div id="errorLogin" style="color: red; font-size: 13px; margin-top: 10px;"></div>
+    </div>
+  </div>
+
+  <!-- CONTENIDO PRINCIPAL (Oculto hasta iniciar sesión) -->
+  <main id="contenidoPrincipal" style="display: none;">
+    <header>
+      <h1>Módulo de Asistencia Institucional</h1>
+    </header>
+
     <!-- LECTOR DE QR / CÁMARA -->
     <section class="card" id="lector">
       <h2>Lector de QR (Cámara)</h2>
       
-      <!-- Visor de la cámara personalizado -->
       <div id="reader" style="width: 100%; max-width: 320px; margin: 0 auto 15px auto; border-radius: 10px; overflow: hidden; background: #f0f0f0; min-height: 200px; display: flex; align-items: center; justify-content: center;"></div>
       
       <div style="text-align: center; margin-bottom: 15px;">
@@ -82,7 +102,6 @@
     const analytics = getAnalytics(app);
     const db = getDatabase(app);
 
-    // Lista base de estudiantes actualizada
     const estudiantesBase = [
       { codigo: "1201214080", nombre: "Lina Fernanda Arevalo Ortiz", grado: "11-A" },
       { codigo: "1201219776", nombre: "Shaira De Jesus Vecino Ortega", grado: "11-A" },
@@ -97,7 +116,6 @@
     const refEstudiantes = ref(db, 'estudiantes');
     const refAsistencias = ref(db, 'asistencias');
 
-    // Forzar la actualización si la lista cambió o está vacía
     get(refEstudiantes).then((snapshot) => {
       if (!snapshot.exists()) {
         set(refEstudiantes, estudiantesBase);
@@ -149,6 +167,38 @@
       mensaje.className = `mensaje ${tipo}`;
       setTimeout(() => (mensaje.className = "mensaje"), 3500);
     }
+
+    // Mostrar/Ocultar contraseña con el botón del ojito
+    window.togglePassword = function() {
+      const inputPass = document.getElementById("inputPass");
+      if (inputPass.type === "password") {
+        inputPass.type = "text";
+      } else {
+        inputPass.type = "password";
+      }
+    };
+
+    // Validación de Login
+    window.verificarLogin = function() {
+      const usuario = document.getElementById("inputUsuario").value.trim();
+      const pass = document.getElementById("inputPass").value.trim();
+
+      if (usuario === "Breyner" && pass === "7315oadolfo") {
+        document.getElementById("pantallaLogin").style.display = "none";
+        document.getElementById("contenidoPrincipal").style.display = "block";
+        inputLector.focus();
+      } else {
+        document.getElementById("errorLogin").textContent = "Usuario o contraseña incorrectos";
+      }
+    };
+
+    // Permitir ingresar con la tecla Enter
+    document.getElementById("inputPass").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") verificarLogin();
+    });
+    document.getElementById("inputUsuario").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") verificarLogin();
+    });
 
     window.agregarEstudiante = function() {
       const codigo = document.getElementById("codigo").value.trim(); 
@@ -309,11 +359,6 @@
       if (!["INPUT", "BUTTON", "LABEL"].includes(e.target.tagName)) {
         inputLector.focus();
       }
-    });
-
-    window.addEventListener("DOMContentLoaded", () => {
-      inputLector.focus();
-      document.getElementById("reader").innerHTML = "<p style='color:#777;'>Cámara lista</p>";
     });
   </script>
 </body>
