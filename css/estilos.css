@@ -1,0 +1,268 @@
+:root {
+    --azul: #1e4d8f;
+    --azul-oscuro: #163967;
+    --fondo: #f3f6fb;
+    --blanco: #ffffff;
+    --ok: #2e8b57;
+    --error: #c0392b;
+    --aviso: #d68910;
+    --borde: #dddddd;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: var(--fondo);
+    color: #222;
+}
+
+
+/* ENCABEZADO */
+
+header {
+    background: var(--azul);
+    color: white;
+    padding: 25px;
+    text-align: center;
+}
+
+header h1 {
+    margin: 0 0 8px;
+}
+
+header p {
+    margin: 0;
+}
+
+
+/* CONTENIDO */
+
+main {
+    max-width: 1100px;
+    margin: 30px auto;
+    padding: 0 20px;
+
+    display: grid;
+    gap: 25px;
+}
+
+
+/* TARJETAS */
+
+.card {
+    background: var(--blanco);
+    padding: 25px;
+
+    border-radius: 12px;
+
+    box-shadow:
+        0 3px 10px rgba(0, 0, 0, 0.08);
+}
+
+.card h2 {
+    margin-top: 0;
+    color: var(--azul);
+}
+
+
+/* LECTOR */
+
+#inputLector {
+    width: 100%;
+
+    padding: 15px;
+
+    font-size: 20px;
+
+    border: 2px solid var(--azul);
+    border-radius: 8px;
+
+    outline: none;
+}
+
+#inputLector:focus {
+    box-shadow: 0 0 0 3px rgba(30, 77, 143, 0.15);
+}
+
+
+/* FORMULARIO */
+
+.form-fila {
+    display: flex;
+
+    flex-wrap: wrap;
+
+    gap: 10px;
+
+    margin-bottom: 20px;
+}
+
+.form-fila input {
+    flex: 1;
+
+    min-width: 180px;
+}
+
+input,
+button {
+    padding: 11px;
+
+    font-size: 16px;
+
+    border-radius: 7px;
+}
+
+input {
+    border: 1px solid #bbb;
+}
+
+button {
+    border: none;
+
+    background: var(--azul);
+
+    color: white;
+
+    cursor: pointer;
+
+    font-weight: bold;
+}
+
+button:hover {
+    background: var(--azul-oscuro);
+}
+
+
+/* TABLAS */
+
+table {
+    width: 100%;
+
+    border-collapse: collapse;
+
+    margin-top: 15px;
+}
+
+th {
+    background: var(--azul);
+
+    color: white;
+
+    padding: 12px;
+
+    text-align: left;
+}
+
+td {
+    padding: 10px;
+
+    border-bottom: 1px solid var(--borde);
+}
+
+tr:hover {
+    background: #f7f9fc;
+}
+
+
+/* BOTÓN ELIMINAR */
+
+.btn-eliminar {
+    background: var(--error);
+}
+
+.btn-eliminar:hover {
+    background: #962d22;
+}
+
+
+/* MENSAJES */
+
+.mensaje {
+    display: none;
+
+    margin-top: 15px;
+
+    padding: 14px;
+
+    border-radius: 8px;
+
+    font-weight: bold;
+}
+
+.mensaje.ok {
+    display: block;
+
+    background: #e6f4ec;
+
+    color: var(--ok);
+}
+
+.mensaje.error {
+    display: block;
+
+    background: #fbeaea;
+
+    color: var(--error);
+}
+
+.mensaje.aviso {
+    display: block;
+
+    background: #fdf2e0;
+
+    color: var(--aviso);
+}
+
+
+/* QR */
+
+.qr-mini {
+    width: 80px;
+    height: 80px;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+}
+
+.qr-mini canvas,
+.qr-mini img {
+    width: 70px !important;
+    height: 70px !important;
+}
+
+
+/* FILTRO */
+
+.filtro {
+    margin-bottom: 15px;
+}
+
+
+/* RESPONSIVE */
+
+@media (max-width: 700px) {
+
+    table {
+        font-size: 14px;
+    }
+
+    th,
+    td {
+        padding: 7px;
+    }
+
+    .form-fila {
+        flex-direction: column;
+    }
+
+    .form-fila input,
+    .form-fila button {
+        width: 100%;
+    }
+}

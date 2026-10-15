@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Asistencia Institucional</title>
+  
+  <link rel="stylesheet" href="css/estilos.css">
+</head>
+<body>
+  <header>
+    <h1>Módulo de Asistencia Institucional</h1>
+  </header>
+
+  <main>
+    <!-- LECTOR DE QR / CÁMARA -->
+    <section class="card" id="lector">
+      <h2>Lector de QR (Cámara)</h2>
+      
+      <!-- Visor de la cámara personalizado -->
+      <div id="reader" style="width: 100%; max-width: 320px; margin: 0 auto 15px auto; border-radius: 10px; overflow: hidden; background: #f0f0f0; min-height: 200px; display: flex; align-items: center; justify-content: center;"></div>
+      
+      <div style="text-align: center; margin-bottom: 15px;">
+        <button type="button" id="btnCamara" onclick="toggleCamara()" style="padding: 8px 16px; font-weight: bold; cursor: pointer;">Iniciar Cámara</button>
+      </div>
+
+      <label for="inputLector">Escriba el código o use lector manual:</label>
+      <input type="text" id="inputLector" placeholder="Pase el carnet o escriba aquí..." autofocus autocomplete="off">
+      <div id="mensaje" class="mensaje"></div>
+    </section>
+
+    <!-- ESTUDIANTES -->
+    <section class="card">
+      <h2>Estudiantes</h2>
+      <div class="form-fila">
+        <input id="codigo" placeholder="Código (ej. 1201214080)">
+        <input id="nombre" placeholder="Nombre completo">
+        <input id="grado" placeholder="Grado/Curso">
+        <button type="button" id="btnAgregar" onclick="agregarEstudiante()">Agregar</button>
+      </div>
+      <table>
+        <thead>
+          <tr><th>Código</th><th>Nombre</th><th>Grado</th><th>QR</th><th>Acción</th></tr>
+        </thead>
+        <tbody id="tablaEstudiantes"></tbody>
+      </table>
+    </section>
+
+    <!-- ASISTENCIA -->
+    <section class="card">
+      <h2>Historial de asistencia</h2>
+      <label>Fecha: <input type="date" id="filtroFecha"></label>
+      <table>
+        <thead>
+          <tr><th>Código</th><th>Nombre</th><th>Fecha</th><th>Hora</th><th>Acción</th></tr>
+        </thead>
+        <tbody id="tablaAsistencia"></tbody>
+      </table>
+    </section>
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getDatabase, ref, set, get, onValue, push, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAAscIj3GJsJq00-0baotTcDZos0aO2YPY",
+      authDomain: "asistencia-colegio-fd81a.firebaseapp.com",
+      databaseURL: "https://asistencia-colegio-fd81a-default-rtdb.firebaseio.com",
+      projectId: "asistencia-colegio-fd81a",
+      storageBucket: "asistencia-colegio-fd81a.firebasestorage.app",
+      messagingSenderId: "906325438510",
+      appId: "1:906325438510:web:025bcd06ea30cebca7efbf",
+      measurementId: "G-208HH1K85W"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
+    const db = getDatabase(app);
+
+    // Lista base de estudiantes actualizada
+    const estudiantesBase = [
+      { codigo: "1201214080", nombre: "Lina Fernanda Arevalo Ortiz", grado: "11-A" },
+      { codigo: "1201219776", nombre: "Shaira De Jesus Vecino Ortega", grado: "11-A" },
+      { codigo: "1043982420", nombre: "Mia Valentina Olarte Ospino", grado: "11-A" },
+      { codigo: "1043308088", nombre: "Breyner De Jesus Vasquez Arias", grado: "11-A" },
+      { codigo: "1043308089", nombre: "Alejandro López", grado: "11-A" }
+    ];
+
+    let estudiantesCache = [];
+    let asistenciasCache = [];
+
+    const refEstudiantes = ref(db, 'estudiantes');
+    const refAsistencias = ref(db, 'asistencias');
+
+    // Forzar la actualización si la lista cambió o está vacía
+    get(refEstudiantes).then((snapshot) => {
+      if (!snapshot.exists()) {
+        set(refEstudiantes, estudiantesBase);
+      }
+    });
+
+    onValue(refEstudiantes, (snapshot) => {
+      const data = snapshot.val();
+      estudiantesCache = data ? (Array.isArray(data) ? data : Object.values(data)) : [];
+      pintarEstudiantes();
+    });
+
+    onValue(refAsistencias, (snapshot) => {
+      const data = snapshot.val();
+      asistenciasCache = data ? Object.values(data) : [];
+      pintarAsistencia();
+    });
+
+    function fechaHoy() {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+    }
+
+    function horaAhora() {
+      const d = new Date();
+      let horas = d.getHours();
+      const minutos = String(d.getMinutes()).padStart(2, "0");
+      const segundos = String(d.getSeconds()).padStart(2, "0");
+      const ampm = horas >= 12 ? 'PM' : 'AM';
+      
+      horas = horas % 12;
+      horas = horas ? horas : 12; 
+      const horaStr = String(horas).padStart(2, "0");
+      
+      return `${horaStr}:${minutos}:${segundos} ${ampm}`;
+    }
+
+    const inputLector = document.getElementById("inputLector");
+    const mensaje = document.getElementById("mensaje");
+    const filtroFecha = document.getElementById("filtroFecha");
+    filtroFecha.value = fechaHoy();
+
+    let html5QrCode = null;
+    let camaraActiva = false;
+    let escaneando = false;
+
+    function mostrarMensaje(texto, tipo) {
+      mensaje.textContent = texto;
+      mensaje.className = `mensaje ${tipo}`;
+      setTimeout(() => (mensaje.className = "mensaje"), 3500);
+    }
+
+    window.agregarEstudiante = function() {
+      const codigo = document.getElementById("codigo").value.trim(); 
+      const nombre = document.getElementById("nombre").value.trim();
+      const grado = document.getElementById("grado").value.trim();
+
+      if (!codigo || !nombre) {
+        alert("Código y nombre son obligatorios.");
+        return;
+      }
+
+      if (estudiantesCache.some(e => e.codigo === codigo)) {
+        alert("Ese código ya existe.");
+        return;
+      }
+
+      estudiantesCache.push({ codigo, nombre, grado });
+      set(refEstudiantes, estudiantesCache);
+
+      document.getElementById("codigo").value = "";
+      document.getElementById("nombre").value = "";
+      document.getElementById("grado").value = "";
+      inputLector.focus();
+    }
+
+    window.eliminarEstudiante = function(codigo) {
+      const nuevaLista = estudiantesCache.filter(e => e.codigo !== codigo);
+      set(refEstudiantes, nuevaLista);
+    }
+
+    function pintarEstudiantes() {
+      const tbody = document.getElementById("tablaEstudiantes");
+      if (!tbody) return;
+      tbody.innerHTML = "";
+
+      estudiantesCache.forEach(est => {
+        const fila = document.createElement("tr");
+        fila.innerHTML = `
+          <td>${est.codigo}</td>
+          <td>${est.nombre}</td>
+          <td>${est.grado}</td>
+          <td><div class="qr-mini" id="qr-${est.codigo}"></div></td>
+          <td><button type="button" class="btn-eliminar" onclick="eliminarEstudiante('${est.codigo}')">Eliminar</button></td>`;
+        tbody.appendChild(fila);
+
+        if (typeof QRCode !== "undefined") {
+          try {
+            new QRCode(document.getElementById(`qr-${est.codigo}`), {
+              text: est.codigo,
+              width: 56,
+              height: 56
+            });
+          } catch(e) {}
+        }
+      });
+    }
+
+    window.registrarAsistencia = function(codigo) {
+      const est = estudiantesCache.find(e => e.codigo === codigo);
+      if (!est) return mostrarMensaje(`Código no reconocido: ${codigo}`, "error");
+
+      const fecha = fechaHoy();
+
+      if (asistenciasCache.some(a => a.codigo === codigo && a.fecha === fecha)) {
+        return mostrarMensaje(`${est.nombre} ya registró su ingreso hoy.`, "aviso");
+      }
+
+      const hora = horaAhora();
+      const nuevaAsistenciaRef = push(refAsistencias);
+      set(nuevaAsistenciaRef, { codigo, nombre: est.nombre, fecha, hora });
+
+      mostrarMensaje(`✔ ${est.nombre} — ingreso registrado a las ${hora}`, "ok");
+    }
+
+    window.eliminarAsistencia = function(codigo, fecha, hora) {
+      get(refAsistencias).then((snapshot) => {
+        if (snapshot.exists()) {
+          snapshot.forEach((childSnapshot) => {
+            const val = childSnapshot.val();
+            if (val.codigo === codigo && val.fecha === fecha && val.hora === hora) {
+              remove(ref(db, `asistencias/${childSnapshot.key}`));
+            }
+          });
+        }
+      });
+    }
+
+    window.pintarAsistencia = function() {
+      const tbody = document.getElementById("tablaAsistencia");
+      if (!tbody) return;
+      tbody.innerHTML = "";
+      
+      asistenciasCache
+        .filter(a => a.fecha === filtroFecha.value)
+        .forEach(a => {
+          tbody.innerHTML += `
+            <tr>
+              <td>${a.codigo}</td>
+              <td>${a.nombre}</td>
+              <td>${a.fecha}</td>
+              <td>${a.hora}</td>
+              <td><button type="button" class="btn-eliminar" onclick="eliminarAsistencia('${a.codigo}', '${a.fecha}', '${a.hora}')">Eliminar</button></td>
+            </tr>`;
+        });
+    }
+
+    window.toggleCamara = function() {
+      const btn = document.getElementById("btnCamara");
+      
+      if (!camaraActiva) {
+        if (!html5QrCode) {
+          html5QrCode = new Html5Qrcode("reader");
+        }
+        
+        const config = { fps: 10, qrbox: { width: 220, height: 220 } };
+        
+        html5QrCode.start(
+          { facingMode: "environment" }, 
+          config,
+          (codigoEscaneado) => {
+            if (!escaneando) {
+              escaneando = true;
+              registrarAsistencia(codigoEscaneado.trim().toUpperCase());
+              setTimeout(() => { escaneando = false; }, 2500);
+            }
+          },
+          (error) => {}
+        ).then(() => {
+          camaraActiva = true;
+          btn.textContent = "Detener Cámara";
+        }).catch(err => {
+          mostrarMensaje("No se pudo acceder a la cámara. Revisa los permisos.", "error");
+        });
+
+      } else {
+        html5QrCode.stop().then(() => {
+          camaraActiva = false;
+          btn.textContent = "Iniciar Cámara";
+          document.getElementById("reader").innerHTML = "<p style='color:#777;'>Cámara apagada</p>";
+        }).catch(err => console.log(err));
+      }
+    }
+
+    filtroFecha.addEventListener("change", () => {
+      pintarAsistencia();
+      inputLector.focus();
+    });
+
+    inputLector.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        const codigo = inputLector.value.trim().toUpperCase();
+        inputLector.value = "";
+        if (codigo) registrarAsistencia(codigo);
+      }
+    });
+
+    document.addEventListener("click", (e) => {
+      if (!["INPUT", "BUTTON", "LABEL"].includes(e.target.tagName)) {
+        inputLector.focus();
+      }
+    });
+
+    window.addEventListener("DOMContentLoaded", () => {
+      inputLector.focus();
+      document.getElementById("reader").innerHTML = "<p style='color:#777;'>Cámara lista</p>";
+    });
+  </script>
+</body>
+</html>
